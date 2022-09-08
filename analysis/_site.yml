@@ -1,0 +1,17 @@
+name: "NODDI-changes-by_rTMS-in_CUD"
+output_dir: ../docs
+navbar:
+  title: "NODDI-changes-by_rTMS-in_CUD"
+  left:
+  - text: Home
+    href: index.html
+  - text: About
+    href: about.html
+  - text: License
+    href: license.html
+output:
+  workflowr::wflow_html:
+    toc: yes
+    toc_float: yes
+    theme: cosmo
+    highlight: textmate
