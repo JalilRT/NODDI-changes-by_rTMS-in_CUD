@@ -1,5 +1,5 @@
 ---
-title: "About"
+title: "Abstract"
 output:
   workflowr::wflow_html:
     toc: false
@@ -7,4 +7,15 @@ editor_options:
   chunk_output_type: console
 ---
 
-Describe your project.
+## Background
+Cocaine use disorder (CUD) is a worldwide public health condition which is suggested to induce pathological changes in macro- and microstructure. Treatments with psychosocial and pharmacological approaches achieve only low to moderate effects on dealing with cocaine clinical symptomatology. Novel approaches such as repetitive transcranial magnetic stimulation (rTMS) have gained attention to induce a reduction in CUD symptoms, yet its mechanisms remain partially understood. Here, we sought to elucidate whether rTMS induces changes on white matter (WM) microstructure in frontostriatal circuits after two weeks of therapy in patients with CUD, and to test whether baseline WM microstructure of the same circuits has an effect on clinical improvement.
+
+## Methods
+This study consisted of a 2-week, parallel group, double-blind, randomized controlled clinical trial (acute phase) (sham [n = 23] and active [n = 27]), in which patients received two daily sessions of rTMS on the left dorsolateral prefrontal cortex (lDLPFC) as an add-on treatment. We acquired T1-weighted and HARDI-DWI 2-shell sequences at baseline and at two weeks. To elucidate the effects from active rTMS on frontostriatal WM tracts, we extracted NODDI metrics and performed a linear mixed model. We further evaluated the relationship between clinical outcomes in craving and impulsivity and the baseline white matter microstructure.
+
+## Results
+After 2 weeks, active rTMS showed a significant increase in neurite density (ICVF or the density of axons and dendrites) compared to sham rTMS in WM tracts connecting left DLPFC with left (β = 0.038, d = -0.278) and right vmPFC (β = 0.034, d = -0.112). Similarly, rTMS showed reduction in orientation dispersion (OD or axon organization) in WM tracts connecting left DLPFC with left caudate nucleus (β = 0.009, d = -0.087), left thalamus (β = 0.006, d = -0.489) and left vmPFC (β = 0.027, d = 0.024). Results also show a greater reduction in craving VAS after 2 weeks rTMS when baseline ICVF was low in WM tracts connecting left caudate nucleus with substantia nigra (β = 22.61, d = 0.729), left pallidum (β = 21.13, d = 0.738), and those connecting left thalamus with substantia nigra (β = 16.30, d = 0.649) and left pallidum (β = 21.92, d = 0.723).
+
+## Conclusions
+Our results suggest that rTMS induced white matter microstructural changes between fronto-striato-thalamic regions after 2 weeks. rTMS-induced microstructural changes may depend on the baseline integrity of the connections between the striatum, thalamus, and the substantia nigra. Connections that predicted clinical improvement in CUD. The current results support the efficacy of rTMS as a therapeutic tool in the treatment of CUD.  However, the individual clinical improvement may rely on each patient’s state of structural connections integrity. 
+
