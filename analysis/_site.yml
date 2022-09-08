@@ -1,7 +1,7 @@
-name: "NODDI-changes-by_rTMS-in_CUD"
+name: NODDI-changes-by_rTMS-in_CUD
 output_dir: ../docs
 navbar:
-  title: "NODDI-changes-by_rTMS-in_CUD"
+  title: NODDI-changes-by_rTMS-in_CUD
   left:
   - text: Home
     href: index.html
@@ -9,6 +9,10 @@ navbar:
     href: about.html
   - text: License
     href: license.html
+  right:
+  - icon: fab fa-github
+    text: Source code
+    href: https://github.com/JalilRT/NODDI-changes-by_rTMS-in_CUD
 output:
   workflowr::wflow_html:
     toc: yes
