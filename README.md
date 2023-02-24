@@ -1,4 +1,4 @@
-# trial
+# NODDI-changes-by_rTMS-in_CUD
 
 A [workflowr][] project.
 

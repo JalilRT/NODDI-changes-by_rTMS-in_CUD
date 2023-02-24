@@ -8,4 +8,16 @@ editor_options:
   chunk_output_type: console
 ---
 
-Welcome to my research website.
+Datasets and code for the “Cortical and subcortical connections change after repetitive transcranial magnetic stimulation therapy in cocaine use disorder and predict clinical outcome” analysis.
+
+Please let us know if something in the code is incomplete or files are missing or you have any problems by here or in:
+
+jalil.rasgadoto@gmail.com and/or victorissa.93@gmail.com
+
+# Study description 
+
+The examination of the changes in NODDI values after rTMS therapy over a Cocaine Substance Use, as well as tested predictions of these over the craving and impulsiveness state.
+
+# Data
+
+BIDS compliant raw MRI data are available at OpenNeuro: https://openneuro.org/datasets/ds003037/versions/1.0.1
