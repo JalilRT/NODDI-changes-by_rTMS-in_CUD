@@ -18,3 +18,4 @@ After 2 weeks, active rTMS showed a significant increase in neurite density (ICV
 
 ## Conclusions
 Our results suggest that rTMS induced white matter microstructural changes between fronto-striato-thalamic regions after 2 weeks. rTMS-induced microstructural changes may depend on the baseline integrity of the connections between the striatum, thalamus, and the substantia nigra. Connections that predicted clinical improvement in CUD. The current results support the efficacy of rTMS as a therapeutic tool in the treatment of CUD.  However, the individual clinical improvement may rely on each patient’s state of structural connections integrity. 
+
