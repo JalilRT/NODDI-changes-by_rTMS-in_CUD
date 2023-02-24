@@ -9,8 +9,7 @@ editor_options:
 
 # Preprocessing of DWI-HARDI images
 
-```{r message=FALSE, warning=FALSE, engine = 'bash', eval = FALSE}
-
+```{bash, eval=F}
 #!/bin/bash
 # Use current working directory
 #$ -wd /mnt/MD1200B/egarza/public/addimex_tms/derivatives/MRtrix3-v3.0_RC3/code/stdoutANDstderr_NodesUsed
@@ -255,9 +254,315 @@ with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-10unbi
 	json.dump(data, ff,sort_keys=False, indent=4)
 END
 
+```
+
+# Extraction of NODDI metrics and warping of IIT atlas WM-ROIs into subjects' native spaces
+
+```{bash, eval=F}
+#!/bin/bash
+# Use current working directory
+#$ -wd /mnt/MD1200B/egarza/public/addimex_tms/derivatives/AMICO-v1.2.10/code/stdoutANDstderr_NodesUsed
+#
+# Join stdout and stderr
+#$ -j y
+#
+# Run job through bash shell
+#$ -S /bin/bash
+#
+#You can edit the scriptsince this line
+#
+# Your job name
+#$ -N AMICO-v1.2.10
+#
+# Number of subjects and maximum of concurrent tasks (-tc 5 -t 1-53)
+#$ -t 1-50
+#$ -q all.q@compute-00-14.cm.cluster
+#
+# Send an email only when there is an aborted task
+#$ -m a
+#$ -M victorissa.93@gmail.com
+#
+# If modules are needed, source modules environment (Do not delete the next line):
+. /etc/profile.d/modules.sh
+#
+# Add any modules you might require:
+module load gcc/8.3.0
+module load fsl/6.0.3
+module load mrtrix3/3.0_RC3
+module load ants/2.3.4
+module load python37/3.7.6
+module load freesurfer/6.0.0
+#
+# Write your commands in the next line
+sub_list=($(ls -d /mnt/MD1200B/egarza/public/addimex_tms/derivatives/fmriprep/output_11FEB2020_fsr/freesurfer/sub-*/mri/orig.mgz | cut -d '/' -f 11))
+export current_sub=${sub_list[$SGE_TASK_ID-1]}
+
+cd ../../sourcedata
+#mkdir -p fMRIPrep-v1.5.5/fmriprep/
+#mkdir fMRIPrep-v1.5.5/freesurfer
+#cp ../../fmriprep/output_11FEB2020_fsr/fmriprep/dataset_description.json ./fMRIPrep-v1.5.5/fmriprep/
+#cp -r ../../fmriprep/output_11FEB2020_fsr/fmriprep/logs ./fMRIPrep-v1.5.5/fmriprep/
+cp -r ../../fmriprep/output_11FEB2020_fsr/freesurfer/${current_sub} ./fMRIPrep-v1.5.5/freesurfer/
+
+mkdir -p MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/
+#cp ../../MRtrix3-v3.0_RC3/dataset_description.json ./MRtrix3-v3.0_RC3/
+cp ../../MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/*08* ./MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/
+cp ../../MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/*10* ./MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/
+cp ../../MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/*09* ./MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/
+
+mkdir -p MRtrix3-v3.0_RC3/sourcedata/${current_sub}/ses-t0/dwi/
+#cp ../../MRtrix3-v3.0_RC3/sourcedata/dataset_description.json ./MRtrix3-v3.0_RC3/sourcedata/
+#cp ../../MRtrix3-v3.0_RC3/sourcedata/participants.tsv ./MRtrix3-v3.0_RC3/sourcedata/
+#cp ../../MRtrix3-v3.0_RC3/sourcedata/CHANGES ./MRtrix3-v3.0_RC3/sourcedata/
+#cp ../../MRtrix3-v3.0_RC3/sourcedata/README ./MRtrix3-v3.0_RC3/sourcedata/
+cp ../../MRtrix3-v3.0_RC3/sourcedata/${current_sub}/ses-t0/dwi/*.bval ./MRtrix3-v3.0_RC3/sourcedata/${current_sub}/ses-t0/dwi/
+cp ../../MRtrix3-v3.0_RC3/sourcedata/${current_sub}/ses-t0/dwi/*.bvec ./MRtrix3-v3.0_RC3/sourcedata/${current_sub}/ses-t0/dwi/
+
+echo Running job from $current_sub
+
+cd ..
+mkdir -p "${current_sub}/ses-t0/dwi/"
+
+export SUBJECTS_DIR=/mnt/MD1200B/egarza/public/addimex_tms/derivatives/AMICO-v1.2.10/sourcedata/fMRIPrep-v1.5.5/freesurfer
+
+dwiextract "sourcedata/MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-10unbiased_dwi.nii.gz" -bzero "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-01b0APlong_dwi.nii.gz" -grad "sourcedata/MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-08mrtrixgrad_dwi.b"
+
+mrmath "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-01b0APlong_dwi.nii.gz" mean "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-02b0APlongsingle_dwi.nii.gz" -axis 3
+
+bbregister --s ${current_sub} --mov "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-02b0APlongsingle_dwi.nii.gz" --reg "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-03b0APlongsingle2fsorig.dat" --dti --init-fsl --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-04b0APlongsingleINfsorig_dwi.nii.gz"
+
+mri_vol2vol --mov "sourcedata/MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-10unbiased_dwi.nii.gz" --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/orig.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-05unbiasedINfsorig_dwi.nii.gz" --reg "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-03b0APlongsingle2fsorig.dat"
+
+mri_vol2vol --mov "sourcedata/MRtrix3-v3.0_RC3/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-09brain_mask.nii.gz" --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/orig.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-05brain_mask.nii.gz" --reg "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-03b0APlongsingle2fsorig.dat" --nearest
+
+cd ..
+
+python - << END
+import os
+os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=1
+os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=1
+current_sub=os.environ["current_sub"]
+
+import amico
+amico.core.setup()
+ae = amico.Evaluation("AMICO-v1.2.10", current_sub+"/ses-t0/dwi/")
+
+amico.util.fsl2scheme("AMICO-v1.2.10/sourcedata/MRtrix3-v3.0_RC3/sourcedata/"+current_sub+"/ses-t0/dwi/"+current_sub+"_ses-t0_dwi.bval", "AMICO-v1.2.10/sourcedata/MRtrix3-v3.0_RC3/sourcedata/"+current_sub+"/ses-t0/dwi/"+current_sub+"_ses-t0_dwi.bvec",schemeFilename = "AMICO-v1.2.10/"+current_sub+"/ses-t0/dwi/"+current_sub+"_ses-t0_space-orig_desc-06AMICOscheme_dwi.scheme")
+
+ae.load_data(dwi_filename = current_sub+"_ses-t0_space-individual_desc-05unbiasedINfsorig_dwi.nii.gz", scheme_filename = current_sub+"_ses-t0_space-orig_desc-06AMICOscheme_dwi.scheme", mask_filename = current_sub+"_ses-t0_space-individual_desc-05brain_mask.nii.gz", b0_thr = 0)
+ae.set_model("NODDI")
+ae.generate_kernels()
+
+ae.CONFIG['solver_params']['numThreads'] = 1
+ae.load_kernels()
+ae.fit()
+ae.save_results()
+END
+
+cd AMICO-v1.2.10
+
+mv -v "${current_sub}/ses-t0/dwi/AMICO/NODDI/config.pickle" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-07NODDIconfig_dwi.pickle"
+mv -v "${current_sub}/ses-t0/dwi/AMICO/NODDI/FIT_dir.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-08NODDIfitdir_dwi.nii.gz"
+mv -v "${current_sub}/ses-t0/dwi/AMICO/NODDI/FIT_ICVF.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-09NODDIfitICVF_dwi.nii.gz"
+mv -v "${current_sub}/ses-t0/dwi/AMICO/NODDI/FIT_ISOVF.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-10NODDIfitISOVF_dwi.nii.gz"
+mv -v "${current_sub}/ses-t0/dwi/AMICO/NODDI/FIT_OD.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-11NODDIfitOD_dwi.nii.gz"
+rm -r "${current_sub}/ses-t0/dwi/AMICO/"
+
+#mkdir ${current_sub}/ses-t0/anat/
+
+#mri_convert sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/orig.mgz ${current_sub}/ses-t0/anat/${current_sub}_ses-t0_space-individual_desc-fsorig_T1w.nii.gz
+
+mri_robust_register --mov "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --dst "code/IITmean_t1_256.nii.gz" --lta "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --mapmov "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorigINIITmean256_T1w.nii.gz" --satit --affine --iscale
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_Caud2Medulla*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-13Caud2MedullaINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_Caud2Palli*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-14Caud2PalliINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_DLPFC2Caud*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-15DLPFC2CaudINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_DLPFC2Thal*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-16DLPFC2ThalINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_Thal2Medulla*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-17Thal2MedullaINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_Thal2Palli*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-18Thal2PalliINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_vmPFC2DLPFC*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-19vmPFC2DLPFCINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_rAngG2rDLPFC*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-20rAngG2rDLPFCINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
+
+mri_vol2vol --mov code/IIT_WM_atlas_256_DLPFC2rvmPFC*3D*.nii.gz --targ "sourcedata/fMRIPrep-v1.5.5/freesurfer/${current_sub}/mri/brain.mgz" --o "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-individual_desc-21DLPFC2rvmPFCINfsorig_dwi.nii.gz" --lta-inv "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-mni_desc-12fsorig2IITmean256_T1w.lta" --nearest
 
 ```
 
+# Simulations of the electric fields induced by TMS
+
+```{bash, eval=F}
+#!/bin/bash
+# Use current working directory
+#$ -wd /mnt/MD1200B/egarza/public/addimex_tms/derivatives/SimNIBS-v3.2.3/code/stdoutANDstderr_NodesUsed
+#
+# Join stdout and stderr
+#$ -j y
+#
+# Run job through bash shell
+#$ -S /bin/bash
+#
+#You can edit the scriptsince this line
+#
+# Your job name
+#$ -N SimNIBS-v3.2.3
+#
+# Number of subjects and maximum of concurrent tasks (-tc 5 -t 1-53)
+#$ -t 1
+#$ -q all.q@compute-00-14.cm.cluster
+#$ -l mf=18G
+#
+# Send an email only when there is an aborted task
+#$ -m a
+#$ -M victorissa.93@gmail.com
+#
+# If modules are needed, source modules environment (Do not delete the next line):
+. /etc/profile.d/modules.sh
+#
+# Add any modules you might require:
+module load gcc/8.3.0
+module load fsl/6.0.3
+module load mrtrix3/3.0_RC3
+module load ants/2.3.4
+module load python37/3.7.6
+module load freesurfer/6.0.0
+module load matlab/R2019a-campus
+## Added by SimNIBS
+SIMNIBS_BIN="/mnt/MD1200B/egarza/vissa/bin"
+export PATH=${PATH}:${SIMNIBS_BIN}
+#
+# Write your commands in the next line
+sub_list=($(cat ../subjects.txt))
+#sub_list=($(ls -d /mnt/MD1200B/egarza/public/addimex_tms/data/bids/sub-*/ses-t0/anat/sub-*_ses-t0_T1w.nii.gz | cut -d '/' -f 9))
+export current_sub=${sub_list[$SGE_TASK_ID-1]}
+export SGE_TASK_ID
+
+cd ../../sourcedata
+#mkdir -p "${current_sub}/ses-t0/anat/"
+#cp "/mnt/MD1200B/egarza/public/addimex_tms/data/bids/${current_sub}/ses-t0/anat/${current_sub}_ses-t0_T1w.nii.gz" "${current_sub}/ses-t0/anat/"
+echo Running job from $current_sub
+
+cd ..
+#mkdir -p "${current_sub}/ses-t0/anat/"
+cd "${current_sub}/ses-t0/anat/"
+
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+headreco all $current_sub "../../../sourcedata/${current_sub}/ses-t0/anat/${current_sub}_ses-t0_T1w.nii.gz"
+
+declare -A stim_siteMNI
+stim_siteMNI[0,0]=-16
+stim_siteMNI[0,1]=52
+stim_siteMNI[0,2]=40
+
+stim_siteMNI[1,0]=-28
+stim_siteMNI[1,1]=46
+stim_siteMNI[1,2]=42
+
+stim_siteMNI[2,0]=-24
+stim_siteMNI[2,1]=50
+stim_siteMNI[2,2]=36
+
+stim_siteMNI[3,0]=-30
+stim_siteMNI[3,1]=42
+stim_siteMNI[3,2]=40
+
+stim_siteMNI[4,0]=-34
+stim_siteMNI[4,1]=36
+stim_siteMNI[4,2]=44
+
+stim_siteMNI[5,0]=-26
+stim_siteMNI[5,1]=42
+stim_siteMNI[5,2]=46
+
+stim_siteMNI[6,0]=-30
+stim_siteMNI[6,1]=48
+stim_siteMNI[6,2]=36
+
+stim_siteMNI[7,0]=-26
+stim_siteMNI[7,1]=48
+stim_siteMNI[7,2]=36
+
+stim_siteMNI[8,0]=-28
+stim_siteMNI[8,1]=46
+stim_siteMNI[8,2]=38
+
+stim_siteMNI[9,0]=-24
+stim_siteMNI[9,1]=50
+stim_siteMNI[9,2]=34
+
+stim_siteMNI[10,0]=-36
+stim_siteMNI[10,1]=28
+stim_siteMNI[10,2]=52
+
+stim_siteMNI[11,0]=-38
+stim_siteMNI[11,1]=36
+stim_siteMNI[11,2]=40
+
+stim_siteMNI[12,0]=-32
+stim_siteMNI[12,1]=54
+stim_siteMNI[12,2]=26
+
+stim_siteMNI[13,0]=-46
+stim_siteMNI[13,1]=32
+stim_siteMNI[13,2]=38
+
+stim_siteMNI[14,0]=-40
+stim_siteMNI[14,1]=42
+stim_siteMNI[14,2]=36
+
+stim_siteMNI[15,0]=-42
+stim_siteMNI[15,1]=50
+stim_siteMNI[15,2]=26
+
+mni2subject_coords -m m2m_${current_sub}/ -c ${stim_siteMNI[$(($SGE_TASK_ID-1)),0]} ${stim_siteMNI[$(($SGE_TASK_ID-1)),1]} ${stim_siteMNI[$(($SGE_TASK_ID-1)),1]} -o ${current_sub}_stim_site.csv
+
+matlab -nosplash -nodesktop -r "run(fullfile('.','..','..','..','code','script_matlab_simulation.m'))"
+
+```
+
+script_matlab_simulation.m
+
+```{bash, eval=F}
+maxNumCompThreads(1);
+addpath('/mnt/MD1200B/egarza/vissa/matlab/');
+[status,current_sub] = system('echo $current_sub');
+[status,SGE_TASK_ID] = system('echo $SGE_TASK_ID');
+
+fileID=fopen('motor_thresholds.txt','r');
+formatSpec='%f';
+didt=fscanf(fileID,formatSpec);
+
+coord = readtable(strcat('../',current_sub,'/ses-t0/anat/',current_sub,'_stim_site.csv'))
+
+% Initialize a session
+s = sim_struct('SESSION');
+S.map_to_fsavg = true;
+S.map_to_mni = true;
+% Name of head mesh
+s.fnamehead = strcat('../',current_sub,'/ses-t0/anat/',current_sub,'.msh');
+% Output folder
+s.pathfem = strcat('../',current_sub,'/ses-t0/anat/simulation/');
+
+% Initialize a list of TMS simulations
+s.poslist{1} = sim_struct('TMSLIST');
+% Select coil
+s.poslist{1}.fnamecoil = 'MagVenture_MC_B70.nii.gz';
+
+% Select coil centre
+s.poslist{1}.pos(1).centre = [coord(2),coord(3),coord(4)];
+% Select coil direction
+s.poslist{1}.pos(1).pos_ydir = [coord(2)+5,coord(3)+5,coord(4)];
+s.poslist{1}.pos(1).didt = didt(SGE_TASK_ID-1);
+
+run_simnibs(s)
+
+```
 
 # Running changes in NODDI after 2 weeks rTMS
 
