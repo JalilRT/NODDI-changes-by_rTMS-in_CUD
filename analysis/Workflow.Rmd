@@ -7,6 +7,260 @@ editor_options:
   chunk_output_type: console
 ---
 
+
+# Preprocessing of DWI-HARDI images
+
+```{r message=FALSE, warning=FALSE}
+
+#!/bin/bash
+# Use current working directory
+#$ -wd /mnt/MD1200B/egarza/public/addimex_tms/derivatives/MRtrix3-v3.0_RC3/code/stdoutANDstderr_NodesUsed
+#
+# Join stdout and stderr
+#$ -j y
+#
+# Run job through bash shell
+#$ -S /bin/bash
+#
+#You can edit the scriptsince this line
+#
+# Your job name
+#$ -N trial_dwipreproc
+#
+# Number of subjects and maximum of concurrent tasks (-tc 5)
+#$ -t 1-2
+#
+# Send an email only when there is an aborted task
+#$ -m a
+#$ -M victorissa.93@gmail.com
+#
+# If modules are needed, source modules environment (Do not delete the next line):
+. /etc/profile.d/modules.sh
+#
+# Add any modules you might require:
+module load gcc/8.3.0
+module load fsl/6.0.3
+module load mrtrix3/3.0_RC3
+module load ants/2.3.4
+module load python37/3.7.6
+#
+# Write your commands in the next line
+sub_list=($(ls -d /mnt/MD1200B/egarza/public/addimex_tms/data/bids/sub-*/ses-t0/dwi/sub-*_ses-t0_dwi.nii.gz | cut -d '/' -f 9))
+export current_sub=${sub_list[$SGE_TASK_ID-1]}
+
+cd ../../sourcedata
+mkdir -p "${current_sub}/ses-t0/fmap/"
+cp -r "/mnt/MD1200B/egarza/public/addimex_tms/data/bids/${current_sub}/ses-t0/dwi" "${current_sub}/ses-t0/"
+cp /mnt/MD1200B/egarza/public/addimex_tms/data/bids/${current_sub}/ses-t0/fmap/*run-02* "${current_sub}/ses-t0/fmap/"
+rdtime=($(cat "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.json" | grep Readout | cut -d ':' -f 2 | cut -d ' ' -f 2))
+echo Running job from $current_sub
+echo "ReadoutTime for dwi is $rdtime"
+
+cd ..
+mkdir -p "${current_sub}/ses-t0/fmap/"
+mkdir "${current_sub}/ses-t0/dwi/"
+
+fslroi "sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-01b0AP_dwi.nii.gz" 0 7
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 1. First 7 volumes of DWI HARDI image, which correspond to a b0 field map with PhaseEncodingDirection j- or anteroposterior AP'
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-01b0AP_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+mrmath "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-01b0AP_dwi.nii.gz" mean "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-02meanb0AP_dwi.nii.gz" -axis 3
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 2. A mean b0 field map from the first 7 volumes of DWI HARDI image, which correspond to b0 field maps with PhaseEncodingDirection j- or anteroposterior AP'
+data['Sources'] = [current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-01b0AP_dwi.nii.gz']
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-02meanb0AP_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+mrmath "sourcedata/${current_sub}/ses-t0/fmap/${current_sub}_ses-t0_run-02_epi.nii.gz" mean "${current_sub}/ses-t0/fmap/${current_sub}_ses-t0_run-02_space-orig_desc-03meanb0PA_epi.nii.gz" -axis 3
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/fmap/'+current_sub+'_ses-t0_run-02_epi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 3. A mean b0 field map from the 7 field map volumes acquired for DWI HARDI image using PhaseEncodingDirection j or posteroanterior PA'
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/fmap/'+current_sub+'_ses-t0_run-02_epi.nii.gz']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/fmap/'+current_sub+'_ses-t0_run-02_space-orig_desc-03meanb0PA_epi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+mrcat "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-02meanb0AP_dwi.nii.gz" "${current_sub}/ses-t0/fmap/${current_sub}_ses-t0_run-02_space-orig_desc-03meanb0PA_epi.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-04b0pair_dwi.nii.gz" -axis 3
+python - << END
+import json
+from collections import OrderedDict
+import os
+from jsonmerge import merge
+current_sub = os.environ["current_sub"]
+
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file1:
+	data_AP = json.load(raw_json_file1,object_pairs_hook=OrderedDict)
+
+with open('sourcedata/'+current_sub+'/ses-t0/fmap/'+current_sub+'_ses-t0_run-02_epi.json') as raw_json_file2:
+	data_PA = json.load(raw_json_file2,object_pairs_hook=OrderedDict)
+
+data = merge(data_PA,data_AP)
+
+data['Description'] = 'Output 4. A b0 pair field map (1st volume = AP, 2nd volume = PA)'
+data['Sources'] = [current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-02meanb0AP_dwi.nii.gz', current_sub+'/ses-t0/fmap/'+current_sub+'_ses-t0_run-02_space-orig_desc-03meanb0PA_epi..nii.gz']
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz','sourcedata/'+current_sub+'/ses-t0/fmap/'+current_sub+'_ses-t0_run-02_epi.nii.gz']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-04b0pair_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+dwidenoise "sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-05denoised_dwi.nii.gz"
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 5. DWI HARDI image that has gone through noise removal by principal component analysis (PCA) using the Marchenko-Pastur (MP) universal distribution'
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-05denoised_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+mrdegibbs "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-05denoised_dwi.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-06unringed_dwi.nii.gz"
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 6. DWI HARDI image with Gibbs ringing artefacts removed using the method of local subvoxel-shifts'
+data['Sources'] = [current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-05denoised_dwi.nii.gz']
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-06unringed_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+cd "${current_sub}/ses-t0/dwi/"
+dwipreproc "${current_sub}_ses-t0_space-orig_desc-06unringed_dwi.nii.gz" "${current_sub}_ses-t0_space-orig_desc-07preproc_dwi.nii.gz" -rpe_pair -se_epi "${current_sub}_ses-t0_space-orig_desc-04b0pair_dwi.nii.gz" -pe_dir 'ap' -fslgrad "../../../sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.bvec" "../../../sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.bval" -export_grad_mrtrix "${current_sub}_ses-t0_space-orig_desc-08mrtrixgrad_dwi.b" -readout_time $rdtime -eddy_options " --slm=linear"
+cd ../../..
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 7. DWI HARDI image corrected for Eddy currents distortions, motion artifacts and susceptibility-induced EPI distortions using FSL'
+data['Sources'] = [current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-06unringed_dwi.nii.gz', current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-04b0pair_dwi.nii.gz']
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bvec', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bval']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-07preproc_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 8. DW gradient scheme in MRtrix format. It consists of one row per entry (i.e. per DWI volume), with each row consisting of 4 space-separated floating-point values; these correspond to [ x y z b ], where [ x y z ] are the components of the gradient vector, and b is the b-value in units of s/mm2'
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bvec', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bval']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-08mrtrixgrad_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+dwi2mask -fslgrad "sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.bvec" "sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.bval" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-07preproc_dwi.nii.gz" "${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_space-orig_desc-09brain_mask.nii.gz"
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 9. A mask that includes both brain tissue and CSF obtained from all diffusion weighted and b=0 volumes'
+data['Sources'] = [current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-07preproc_dwi.nii.gz']
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bvec', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bval']
+data['SpatialReference'] = 'orig'
+data['Type'] = 'Brain'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-09brain_mask.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+cd "${current_sub}/ses-t0/dwi/"
+dwibiascorrect -ants -fslgrad "../../../sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.bvec" "../../../sourcedata/${current_sub}/ses-t0/dwi/${current_sub}_ses-t0_dwi.bval" -mask "${current_sub}_ses-t0_space-orig_desc-09brain_mask.nii.gz" "${current_sub}_ses-t0_space-orig_desc-07preproc_dwi.nii.gz" "${current_sub}_ses-t0_space-orig_desc-10unbiased_dwi.nii.gz"
+cd ../../..
+python - << END
+import json
+from collections import OrderedDict
+import os
+current_sub = os.environ["current_sub"]
+
+with open('sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.json') as raw_json_file:
+	data = json.load(raw_json_file,object_pairs_hook=OrderedDict)
+
+data['Description'] = 'Output 10. DWI HARDI image with bias field correction performed using the N4 algorithm as provided in ANTs'
+data['Sources'] = [current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-07preproc_dwi.nii.gz', current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-09brain_mask.nii.gz']
+data['RawSources'] = ['sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.nii.gz', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bvec', 'sourcedata/'+current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_dwi.bval']
+data['SpatialReference'] = 'orig'
+
+with open(current_sub+'/ses-t0/dwi/'+current_sub+'_ses-t0_space-orig_desc-10unbiased_dwi.json', 'w') as ff:
+	json.dump(data, ff,sort_keys=False, indent=4)
+END
+
+
+
+```
+
+
 # Running changes in NODDI after 2 weeks rTMS
 
 Lmer analysis for ICVF
